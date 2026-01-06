@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Wallet Chat Pro</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+    <style>
+        /* --- লেআউট --- */
+        * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; font-family: sans-serif; background: #111; color: #ddd; height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
+
+        svg { width: 24px; height: 24px; fill: white; display: block; }
+
+        /* --- সাইডবার --- */
+        .sidebar { width: 100%; height: 100%; background: #1f1f1f; display: flex; flex-direction: column; z-index: 10; position: relative; }
+        
+        .header { padding: 15px; background: #2a2a2a; border-bottom: 1px solid #333; height: 70px; display: flex; align-items: center; justify-content: space-between; }
+        
+        /* প্রোফাইল এবং নোটিফিকেশন সেকশন */
+        .header-right { display: flex; align-items: center; gap: 15px; }
+        .my-profile { text-align: right; }
+        .my-addr { font-weight: bold; font-size: 14px; color: white; display: block; }
+        .my-status { font-size: 11px; color: #00a884; display: block; margin-top: 2px; }
+
+        /* নোটিফিকেশন বেল আইকন */
+        .bell-btn { background: none; border: none; cursor: pointer; position: relative; }
+        .bell-btn svg { fill: #aaa; width: 22px; height: 22px; }
+        .bell-btn.active svg { fill: #00a884; } /* অন হলে সবুজ হবে */
+
+        .chat-list { flex: 1; overflow-y: auto; padding-bottom: 80px; }
+        .chat-item { padding: 15px; border-bottom: 1px solid #2a2a2a; display: flex; align-items: center; gap: 15px; cursor: pointer; }
+        .chat-item:hover { background: #2b2b2b; }
+        .avatar { width: 45px; height: 45px; background: #555; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; flex-shrink: 0; }
+        
+        .fab-btn { position: absolute; bottom: 25px; right: 25px; width: 55px; height: 55px; background: #00a884; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5); cursor: pointer; z-index: 20; color: white; font-size: 30px; }
+
+        /* --- চ্যাট উইন্ডো --- */
+        .chat-window { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0b0b0b; z-index: 50; display: none; flex-direction: column; }
+        .chat-window.active { display: flex; }
+
+        .chat-header { padding: 0 10px; background: #2a2a2a; height: 60px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #333; flex-shrink: 0; }
+        .back-btn { cursor: pointer; padding: 10px; display: flex; align-items: center; justify-content: center; }
+
+        .secret-box { display: flex; align-items: center; gap: 5px; background: #111; padding: 5px 10px; border-radius: 20px; border: 1px solid #444; margin-left: auto; }
+        .secret-box input { background: transparent; border: none; color: #00a884; width: 50px; text-align: center; font-weight: bold; font-size: 14px; }
+
+        #msg-container { flex: 1; padding: 15px; overflow-y: auto; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); opacity: 0.9; display: flex; flex-direction: column; gap: 10px; padding-bottom: 80px; }
+        
+        .msg { max-width: 75%; padding: 10px; border-radius: 10px; font-size: 14px; position: relative; word-wrap: break-word; color: white; display: flex; flex-direction: column; }
+        .sent { align-self: flex-end; background: #005c4b; border-top-right-radius: 0; }
+        .received { align-self: flex-start; background: #202c33; border-top-left-radius: 0; }
+        .msg img { max-width: 100%; border-radius: 5px; margin-top: 5px; }
+
+        /* --- ফুটার --- */
+        .footer { position: absolute; bottom: 0; left: 0; width: 100%; padding: 10px; background: #1f1f1f; display: flex; gap: 10px; align-items: center; border-top: 1px solid #333; z-index: 60; }
+        .footer input[type="text"] { flex: 1; padding: 12px; border-radius: 25px; border: none; background: #2a2a2a; color: white; font-size: 16px; }
+        .icon-btn { background: transparent; border: none; cursor: pointer; padding: 8px; }
+        .send-btn { background: #00a884; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; border: none; }
+
+        /* মোডাল */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; display: none; align-items: center; justify-content: center; }
+        .modal-box { background: #2a2a2a; padding: 25px; border-radius: 10px; width: 90%; max-width: 350px; text-align: center; }
+        .modal-box input { width: 100%; padding: 12px; margin: 15px 0; background: #111; border: 1px solid #444; color: white; border-radius: 5px; }
+        .btn { width: 100%; padding: 12px; background: #00a884; color: white; border: none; font-weight: bold; cursor: pointer; border-radius: 5px; }
+    </style>
+</head>
+<body>
+
+    <div id="login-modal" class="modal-overlay" style="display: flex;">
+        <div class="modal-box">
+            <h2 style="color:#00a884;">Wallet Login</h2>
+            <input type="text" id="pkInput" placeholder="Private Key (0x...)">
+            <button class="btn" onclick="login()">Login</button>
+        </div>
+    </div>
+
+    <div class="sidebar" id="sidebar">
+        <div class="header">
+            <h3 style="margin:0; color: white; margin-left: 5px;">Chats</h3>
+            
+            <div class="header-right">
+                <button class="bell-btn" id="bellBtn" onclick="requestNotifyPermission()">
+                    <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/></svg>
+                </button>
+
+                <div class="my-profile">
+                    <span id="myAddr" class="my-addr">0x...</span>
+                    <span id="myStatus" class="my-status">Offline</span>
+                </div>
+            </div>
+        </div>
+        <div class="chat-list" id="chatList"></div>
+        <div class="fab-btn" onclick="document.getElementById('new-chat-modal').style.display='flex'">+</div>
+    </div>
+
+    <div id="new-chat-modal" class="modal-overlay">
+        <div class="modal-box">
+            <h3>New Message</h3>
+            <input type="text" id="newAddr" placeholder="Paste Address (0x...)">
+            <button class="btn" onclick="startNewChat()">Start Chat</button>
+            <button class="btn" style="background:#444; margin-top:10px;" onclick="document.getElementById('new-chat-modal').style.display='none'">Cancel</button>
+        </div>
+    </div>
+
+    <div class="chat-window" id="chatWindow">
+        <div class="chat-header">
+            <div class="back-btn" onclick="closeChat()">
+                <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+            </div>
+            <div class="avatar" id="chatAvatar">?</div>
+            <div style="flex:1; margin-left: 10px;">
+                <h4 style="margin:0; color:white;" id="chatTitle">User</h4>
+                <small style="color:#aaa; font-size:10px;">E2E Encrypted</small>
+            </div>
+            <div class="secret-box">
+                <svg style="width:14px; height:14px;" viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+                <input type="text" id="secret" value="1234">
+            </div>
+        </div>
+
+        <div id="msg-container"></div>
+
+        <div class="footer">
+            <button class="icon-btn" onclick="document.getElementById('imgInput').click()">
+                <svg viewBox="0 0 24 24" style="fill:#aaa;"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+            </button>
+            <input type="file" id="imgInput" accept="image/*" hidden onchange="handleImage(this)">
+            <input type="text" id="msgInput" placeholder="Type message...">
+            <button class="send-btn" onclick="sendMsg()">
+                <svg viewBox="0 0 24 24" style="width:20px; height:20px; margin-left:2px;"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <audio id="notifySound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+
+    <script>
+        // ------------------------------------------
+        // TODO: Firebase Config
+        // ------------------------------------------
+        const firebaseConfig = {
+  apiKey: "AIzaSyCxjJAl5cbLnVTux_d2VWOhS-dB-EK9aVg",
+  authDomain: "end-to-end-encryption-838b4.firebaseapp.com",
+  databaseURL: "https://end-to-end-encryption-838b4-default-rtdb.firebaseio.com",
+  projectId: "end-to-end-encryption-838b4",
+  storageBucket: "end-to-end-encryption-838b4.firebasestorage.app",
+  messagingSenderId: "822825436780",
+  appId: "1:822825436780:web:29d9e4958fafb42ec5ba49",
+  measurementId: "G-3LW5MHPRQ1"
+};
+
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let wallet, myAddress, currentPartner = null;
+        let allMsgs = [];
+        let contactSet = new Set();
+
+        window.onload = () => {
+            const key = localStorage.getItem("saved_key");
+            if(key) { document.getElementById('pkInput').value = key; login(); }
+            
+            // পারমিশন চেক করা
+            if(Notification.permission === 'granted') {
+                document.getElementById('bellBtn').classList.add('active');
+            }
+        }
+
+        // --- ৩. ম্যানুয়াল পারমিশন রিকোয়েস্ট (বাটনে ক্লিক করলে) ---
+        function requestNotifyPermission() {
+            Notification.requestPermission().then(permission => {
+                if (permission === "granted") {
+                    document.getElementById('bellBtn').classList.add('active');
+                    alert("Notification Enabled!");
+                    // টেস্ট নোটিফিকেশন
+                    new Notification("Wallet Chat", { body: "Notifications are working!" });
+                } else {
+                    alert("Notification Blocked! Please enable from browser settings.");
+                }
+            });
+        }
+
+        function login() {
+            const pk = document.getElementById('pkInput').value.trim();
+            try {
+                wallet = new ethers.Wallet(pk);
+                myAddress = wallet.address;
+                localStorage.setItem("saved_key", pk);
+                
+                document.getElementById('login-modal').style.display = 'none';
+                
+                const shortAddr = myAddress.substring(0,6) + "..." + myAddress.substring(38);
+                document.getElementById('myAddr').innerText = shortAddr;
+                document.getElementById('myStatus').innerText = "Online";
+
+                loadMessages();
+            } catch(e) { alert("Invalid Key"); }
+        }
+
+        function loadMessages() {
+            db.ref('chats').limitToLast(500).on('value', snap => {
+                const data = snap.val();
+                if(!data) return;
+                
+                allMsgs = [];
+                Object.keys(data).forEach(k => {
+                    const m = data[k]; m.key = k;
+                    if(m.sender === myAddress || m.receiver === myAddress) {
+                        allMsgs.push(m);
+                        addContact(m.sender === myAddress ? m.receiver : m.sender);
+                        checkNotification(m);
+                    }
+                });
+                if(currentPartner) renderChat(currentPartner);
+            });
+        }
+
+        function checkNotification(msg) {
+            // নিজের মেসেজ না হলে এবং ১০ সেকেন্ডের মধ্যে হলে
+            if (msg.sender !== myAddress) {
+                if ((Date.now() - msg.timestamp) < 10000) {
+                    
+                    // সাউন্ড
+                    const s = document.getElementById('notifySound');
+                    if(s) s.play().catch(e=>console.log("Audio blocked"));
+
+                    // অ্যাপ বা ব্রাউজার নোটিফিকেশন
+                    if (typeof Android !== "undefined" && Android.showNotification) {
+                        Android.showNotification("Wallet Chat", "New Encrypted Message");
+                    } 
+                    else if (Notification.permission === "granted") {
+                        new Notification("Wallet Chat", {
+                            body: "New message received",
+                            icon: "https://cdn-icons-png.flaticon.com/512/2040/2040520.png"
+                        });
+                    }
+                }
+            }
+        }
+
+        function addContact(addr) {
+            if(contactSet.has(addr)) return;
+            contactSet.add(addr);
+            const div = document.getElementById('chatList');
+            const item = document.createElement('div');
+            item.className = 'chat-item';
+            item.innerHTML = `
+                <div class="avatar">${addr.substring(2,4).toUpperCase()}</div>
+                <div><div style="font-weight:bold; color:white;">${addr.substring(0,6)}...${addr.substring(38)}</div><div style="font-size:12px; color:#aaa;">Click to chat</div></div>`;
+            item.onclick = () => openChat(addr);
+            div.appendChild(item);
+        }
+
+        function startNewChat() {
+            const addr = document.getElementById('newAddr').value.trim();
+            if(ethers.utils.isAddress(addr)) {
+                document.getElementById('new-chat-modal').style.display = 'none';
+                addContact(addr);
+                openChat(addr);
+            } else { alert("Invalid Address"); }
+        }
+
+        function openChat(addr) {
+            currentPartner = addr;
+            document.getElementById('chatWindow').classList.add('active');
+            document.getElementById('chatTitle').innerText = addr.substring(0,6) + "..." + addr.substring(38);
+            document.getElementById('chatAvatar').innerText = addr.substring(2,4).toUpperCase();
+            renderChat(addr);
+        }
+
+        function closeChat() {
+            currentPartner = null;
+            document.getElementById('chatWindow').classList.remove('active');
+        }
+
+        function renderChat(addr) {
+            const container = document.getElementById('msg-container');
+            container.innerHTML = "";
+            const secret = document.getElementById('secret').value;
+            const msgs = allMsgs.filter(m => (m.sender === myAddress && m.receiver === addr) || (m.sender === addr && m.receiver === myAddress));
+
+            if(msgs.length === 0) { container.innerHTML = '<div style="text-align:center; color:#555; margin-top:50px;">No messages yet.</div>'; return; }
+
+            msgs.forEach(m => {
+                const isMe = m.sender === myAddress;
+                let content = "🔒 Encrypted";
+                try {
+                    const bytes = CryptoJS.AES.decrypt(m.message, secret);
+                    content = bytes.toString(CryptoJS.enc.Utf8);
+                } catch(e){}
+
+                const div = document.createElement('div');
+                div.className = `msg ${isMe ? 'sent' : 'received'}`;
+                
+                if(content.startsWith("data:image")) {
+                    div.innerHTML = `<img src="${content}" alt="Image">`;
+                } else {
+                    div.innerText = content;
+                }
+
+                if(isMe) div.ondblclick = () => { if(confirm("Delete?")) db.ref('chats/'+m.key).remove(); }
+                container.appendChild(div);
+            });
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function sendMsg() {
+            const txt = document.getElementById('msgInput').value.trim();
+            if(!txt || !currentPartner) return;
+            performSend(txt);
+        }
+
+        function handleImage(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const img = new Image();
+                    img.src = e.target.result;
+                    img.onload = function () {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        const maxWidth = 300; 
+                        const scaleSize = maxWidth / img.width;
+                        canvas.width = maxWidth;
+                        canvas.height = img.height * scaleSize;
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        performSend(canvas.toDataURL('image/jpeg', 0.7)); 
+                    }
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function performSend(data) {
+            const secret = document.getElementById('secret').value;
+            const enc = CryptoJS.AES.encrypt(data, secret).toString();
+            db.ref('chats').push({
+                sender: myAddress,
+                receiver: currentPartner,
+                message: enc,
+                timestamp: Date.now()
+            });
+            document.getElementById('msgInput').value = "";
+            document.getElementById('imgInput').value = "";
+        }
+    </script>
+</body>
+              </html>
+              
