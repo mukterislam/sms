@@ -1,12 +1,12 @@
-const CACHE_NAME = "my-pwa-cache-v1";
+const CACHE_NAME = "my-pwa-cache-v2";
 
 // এখানে শুধু প্রধান ফাইলগুলোর নাম দিন যা অফলাইনেও দেখাতে চান
 const ASSETS_TO_CACHE = [
-    "/",
-    "/index.html",
-    "/script.js",
-    "/icons/icon-192.png",
-    "/icons/icon-512.png"
+    "./",
+    "./index.html",
+    "./script.js",
+    "./icons/icon-192.png",
+    "./icons/icon-512.png"
     // আপনার যদি main.js বা অন্য কোনো জরুরি ফাইল থাকে, তা এখানে যোগ করুন
 ];
 
