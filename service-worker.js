@@ -4,7 +4,7 @@ const CACHE_NAME = "my-pwa-cache-v1";
 const ASSETS_TO_CACHE = [
     "/",
     "/index.html",
-    "/style.css",
+    "/script.js",
     "/icons/icon-192.png",
     "/icons/icon-512.png"
     // আপনার যদি main.js বা অন্য কোনো জরুরি ফাইল থাকে, তা এখানে যোগ করুন
