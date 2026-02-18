@@ -12,33 +12,34 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
     <style>
-        /* --- লেআউট --- */
+        /* --- লেআউট ও বেসিক স্টাইল --- */
         * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
         body { margin: 0; font-family: sans-serif; background: #111; color: #ddd; height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
-
         svg { width: 24px; height: 24px; fill: white; display: block; }
 
-        /* --- সাইডবার --- */
+        /* --- সাইডবার (চ্যাট লিস্ট) --- */
         .sidebar { width: 100%; height: 100%; background: #1f1f1f; display: flex; flex-direction: column; z-index: 10; position: relative; }
         
         .header { padding: 15px; background: #2a2a2a; border-bottom: 1px solid #333; height: 70px; display: flex; align-items: center; justify-content: space-between; }
         
-        /* প্রোফাইল এবং নোটিফিকেশন সেকশন */
-        .header-right { display: flex; align-items: center; gap: 15px; }
-        .my-profile { text-align: right; }
+        .header-right { display: flex; align-items: center; gap: 10px; }
+        .my-profile { text-align: right; margin-right: 5px; }
         .my-addr { font-weight: bold; font-size: 14px; color: white; display: block; }
         .my-status { font-size: 11px; color: #00a884; display: block; margin-top: 2px; }
 
-        /* নোটিফিকেশন বেল আইকন */
-        .bell-btn { background: none; border: none; cursor: pointer; position: relative; }
-        .bell-btn svg { fill: #aaa; width: 22px; height: 22px; }
-        .bell-btn.active svg { fill: #00a884; } /* অন হলে সবুজ হবে */
+        .icon-btn-header { background: none; border: none; cursor: pointer; padding: 5px; }
+        .icon-btn-header svg { fill: #aaa; width: 22px; height: 22px; transition: 0.2s; }
+        .bell-btn.active svg { fill: #00a884; }
+        .logout-btn svg { fill: #ff3b30; }
 
         .chat-list { flex: 1; overflow-y: auto; padding-bottom: 80px; }
         .chat-item { padding: 15px; border-bottom: 1px solid #2a2a2a; display: flex; align-items: center; gap: 15px; cursor: pointer; }
         .chat-item:hover { background: #2b2b2b; }
         .avatar { width: 45px; height: 45px; background: #555; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; flex-shrink: 0; }
         
+        .unread-badge { background: #00a884; color: white; font-size: 11px; font-weight: bold; padding: 2px 7px; border-radius: 50%; margin-left: auto; display: none; }
+        .unread-badge.active { display: block; }
+
         .fab-btn { position: absolute; bottom: 25px; right: 25px; width: 55px; height: 55px; background: #00a884; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5); cursor: pointer; z-index: 20; color: white; font-size: 30px; }
 
         /* --- চ্যাট উইন্ডো --- */
@@ -53,16 +54,22 @@
 
         #msg-container { flex: 1; padding: 15px; overflow-y: auto; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); opacity: 0.9; display: flex; flex-direction: column; gap: 10px; padding-bottom: 80px; }
         
-        .msg { max-width: 75%; padding: 10px; border-radius: 10px; font-size: 14px; position: relative; word-wrap: break-word; color: white; display: flex; flex-direction: column; }
+        .msg { max-width: 80%; padding: 10px; border-radius: 10px; font-size: 14px; position: relative; word-wrap: break-word; color: white; display: flex; flex-direction: column; }
         .sent { align-self: flex-end; background: #005c4b; border-top-right-radius: 0; }
         .received { align-self: flex-start; background: #202c33; border-top-left-radius: 0; }
         .msg img { max-width: 100%; border-radius: 5px; margin-top: 5px; }
+        
+        audio { height: 35px; width: 220px; margin-top: 5px; outline: none; }
 
         /* --- ফুটার --- */
         .footer { position: absolute; bottom: 0; left: 0; width: 100%; padding: 10px; background: #1f1f1f; display: flex; gap: 10px; align-items: center; border-top: 1px solid #333; z-index: 60; }
         .footer input[type="text"] { flex: 1; padding: 12px; border-radius: 25px; border: none; background: #2a2a2a; color: white; font-size: 16px; }
         .icon-btn { background: transparent; border: none; cursor: pointer; padding: 8px; }
         .send-btn { background: #00a884; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; border: none; }
+        .mic-btn { background: #2a2a2a; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; border: none; color: #aaa; transition: 0.2s; }
+        .mic-btn.recording { background: #ff3b30; color: white; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(255, 59, 48, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); } }
+        .rec-overlay { position: absolute; bottom: 70px; left: 0; width: 100%; text-align: center; color: #ff3b30; font-weight: bold; display: none; background: rgba(0,0,0,0.7); padding: 5px; }
 
         /* মোডাল */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; display: none; align-items: center; justify-content: center; }
@@ -84,16 +91,19 @@
     <div class="sidebar" id="sidebar">
         <div class="header">
             <h3 style="margin:0; color: white; margin-left: 5px;">Chats</h3>
-            
             <div class="header-right">
-                <button class="bell-btn" id="bellBtn" onclick="requestNotifyPermission()">
-                    <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/></svg>
-                </button>
-
                 <div class="my-profile">
                     <span id="myAddr" class="my-addr">0x...</span>
                     <span id="myStatus" class="my-status">Offline</span>
                 </div>
+                
+                <button class="icon-btn-header bell-btn" id="bellBtn" onclick="requestNotifyPermission()">
+                    <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/></svg>
+                </button>
+                
+                <button class="icon-btn-header logout-btn" onclick="logout()">
+                    <svg viewBox="0 0 24 24"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg>
+                </button>
             </div>
         </div>
         <div class="chat-list" id="chatList"></div>
@@ -126,14 +136,21 @@
         </div>
 
         <div id="msg-container"></div>
+        <div id="rec-status" class="rec-overlay">Recording... Click Mic to Send</div>
 
         <div class="footer">
             <button class="icon-btn" onclick="document.getElementById('imgInput').click()">
                 <svg viewBox="0 0 24 24" style="fill:#aaa;"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
             </button>
             <input type="file" id="imgInput" accept="image/*" hidden onchange="handleImage(this)">
+            
             <input type="text" id="msgInput" placeholder="Type message...">
-            <button class="send-btn" onclick="sendMsg()">
+            
+            <button class="mic-btn" id="micBtn" onmousedown="startRecording()" onmouseup="stopRecording()" ontouchstart="startRecording()" ontouchend="stopRecording()">
+                <svg viewBox="0 0 24 24" style="fill:currentColor; width:22px; height:22px;"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+            </button>
+
+            <button class="send-btn" onclick="sendMsg()" style="display:none;" id="sendBtn">
                 <svg viewBox="0 0 24 24" style="width:20px; height:20px; margin-left:2px;"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
             </button>
         </div>
@@ -141,8 +158,291 @@
 
     <audio id="notifySound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
 
-<script src="script.js"></script>
-<script>
+    <script>
+        // --- Firebase Config বসান ---
+        const firebaseConfig = {
+  apiKey: "AIzaSyCxjJAl5cbLnVTux_d2VWOhS-dB-EK9aVg",
+  authDomain: "end-to-end-encryption-838b4.firebaseapp.com",
+  databaseURL: "https://end-to-end-encryption-838b4-default-rtdb.firebaseio.com",
+  projectId: "end-to-end-encryption-838b4",
+  storageBucket: "end-to-end-encryption-838b4.firebasestorage.app",
+  messagingSenderId: "822825436780",
+  appId: "1:822825436780:web:29d9e4958fafb42ec5ba49",
+  measurementId: "G-3LW5MHPRQ1"
+};
+
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let wallet, myAddress, currentPartner = null;
+        let allMsgs = [];
+        let contactSet = new Set();
+        let lastReadMap = JSON.parse(localStorage.getItem("lastReads") || "{}");
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+
+        // Toggle Mic/Send Button
+        document.getElementById('msgInput').addEventListener('input', function() {
+            const txt = this.value.trim();
+            if(txt.length > 0) {
+                document.getElementById('micBtn').style.display = 'none';
+                document.getElementById('sendBtn').style.display = 'flex';
+            } else {
+                document.getElementById('micBtn').style.display = 'flex';
+                document.getElementById('sendBtn').style.display = 'none';
+            }
+        });
+
+        // --- Back Button Handler (History API Logic) ---
+        // যখন ফোনের ব্যাক বাটন চাপা হবে, তখন এই ফাংশন কল হবে
+        window.onpopstate = function(event) {
+            // যদি আমরা হিস্টোরি পপ করি, তাহলে চ্যাট উইন্ডো বন্ধ হবে
+            document.getElementById('chatWindow').classList.remove('active');
+            currentPartner = null;
+        };
+window.onload = () => {
+            const key = localStorage.getItem("saved_key");
+            if(key) { document.getElementById('pkInput').value = key; login(); }
+            if(Notification.permission === 'granted') document.getElementById('bellBtn').classList.add('active');
+        }
+
+        function requestNotifyPermission() {
+            Notification.requestPermission().then(permission => {
+                if (permission === "granted") document.getElementById('bellBtn').classList.add('active');
+            });
+        }
+
+        function logout() {
+            if(confirm("Are you sure you want to logout?")) {
+                localStorage.removeItem("saved_key");
+                location.reload();
+            }
+        }
+
+        function login() {
+            const pk = document.getElementById('pkInput').value.trim();
+            try {
+                wallet = new ethers.Wallet(pk);
+                myAddress = wallet.address;
+                localStorage.setItem("saved_key", pk);
+                document.getElementById('login-modal').style.display = 'none';
+                document.getElementById('myAddr').innerText = myAddress.substring(0,6) + "..." + myAddress.substring(38);
+                document.getElementById('myStatus').innerText = "Online";
+                loadMessages();
+            } catch(e) { alert("Invalid Key"); }
+        }
+
+        function loadMessages() {
+            db.ref('chats').limitToLast(500).on('value', snap => {
+                const data = snap.val();
+                if(!data) return;
+                allMsgs = [];
+                let unreadCounts = {};
+
+                Object.keys(data).forEach(k => {
+                    const m = data[k]; m.key = k;
+                    if(m.sender === myAddress || m.receiver === myAddress) {
+                        allMsgs.push(m);
+                        const partner = (m.sender === myAddress) ? m.receiver : m.sender;
+                        addContact(partner);
+                        if (m.receiver === myAddress) {
+                            const lastRead = lastReadMap[partner] || 0;
+                            if (m.timestamp > lastRead && currentPartner !== partner) {
+                                unreadCounts[partner] = (unreadCounts[partner] || 0) + 1;
+                            }
+                        }
+                        checkNotification(m);
+                    }
+                });
+                contactSet.forEach(addr => updateBadgeUI(addr, unreadCounts[addr] || 0));
+                if(currentPartner) renderChat(currentPartner);
+            });
+        }
+
+        function checkNotification(msg) {
+            if (msg.sender !== myAddress && (Date.now() - msg.timestamp) < 10000) {
+                const s = document.getElementById('notifySound');
+                if(s) s.play().catch(e=>{});
+                if (typeof Android !== "undefined" && Android.showNotification) {
+                    Android.showNotification("Wallet Chat", "New Encrypted Message");
+                } 
+            }
+        }
+
+        function addContact(addr) {
+            if(contactSet.has(addr)) return;
+            contactSet.add(addr);
+            const div = document.getElementById('chatList');
+            const item = document.createElement('div');
+            item.className = 'chat-item';
+            item.innerHTML = `
+                <div class="avatar">${addr.substring(2,4).toUpperCase()}</div>
+                <div style="flex:1; margin-left:10px;">
+                    <div style="font-weight:bold; color:white; display:flex; align-items:center;">
+                        ${addr.substring(0,6)}...${addr.substring(38)}
+                        <span class="unread-badge" id="badge-${addr}">0</span>
+                    </div>
+                    <div style="font-size:12px; color:#aaa;">Click to chat</div>
+                </div>`;
+            item.onclick = () => openChat(addr);
+            div.appendChild(item);
+        }
+
+        function updateBadgeUI(addr, count) {
+            const badge = document.getElementById('badge-' + addr);
+            if (badge) {
+                if (count > 0) { badge.innerText = count; badge.classList.add('active'); }
+                else { badge.classList.remove('active'); }
+            }
+        }
+
+        function startNewChat() {
+            const addrInput = document.getElementById('newAddr');
+            const rawAddr = addrInput.value.trim();
+            if(!rawAddr) { alert("Please enter an address"); return; }
+
+            try {
+                const formattedAddr = ethers.utils.getAddress(rawAddr);
+                document.getElementById('new-chat-modal').style.display = 'none';
+                addContact(formattedAddr);
+                openChat(formattedAddr);
+                addrInput.value = "";
+            } catch(e) { alert("Invalid Address!"); }
+        }
+
+        function openChat(addr) {
+            currentPartner = addr;
+            updateBadgeUI(addr, 0);
+            lastReadMap[addr] = Date.now();
+            localStorage.setItem("lastReads", JSON.stringify(lastReadMap));
+            
+            // --- NEW: Push History State ---
+            // এটি ব্রাউজার হিস্টোরিতে একটি নতুন এন্ট্রি যোগ করে
+            history.pushState({chat: true}, null, "#chat");
+
+            document.getElementById('chatWindow').classList.add('active');
+            document.getElementById('chatTitle').innerText = addr.substring(0,6) + "..." + addr.substring(38);
+            document.getElementById('chatAvatar').innerText = addr.substring(2,4).toUpperCase();
+            renderChat(addr);
+        }
+
+        function closeChat() {
+            // যদি হিস্টোরি থাকে, তাহলে ব্যাক করি (এতে ফোনের ব্যাক বাটন সিমুলেট হবে)
+            if(history.state) {
+                history.back();
+            } else {
+                document.getElementById('chatWindow').classList.remove('active');
+                currentPartner = null;
+            }
+        }
+
+        function renderChat(addr) {
+            const container = document.getElementById('msg-container');
+            container.innerHTML = "";
+            const secret = document.getElementById('secret').value;
+            const msgs = allMsgs.filter(m => (m.sender === myAddress && m.receiver === addr) || (m.sender === addr && m.receiver === myAddress));
+
+            if(msgs.length === 0) { container.innerHTML = '<div style="text-align:center; color:#555; margin-top:50px;">No messages yet.</div>'; return; }
+
+            msgs.forEach(m => {
+                const isMe = m.sender === myAddress;
+                let content = "🔒 Encrypted";
+                try {
+                    const bytes = CryptoJS.AES.decrypt(m.message, secret);
+                    content = bytes.toString(CryptoJS.enc.Utf8);
+                } catch(e){}
+
+                const div = document.createElement('div');
+                div.className = `msg ${isMe ? 'sent' : 'received'}`;
+                
+                if(content.startsWith("data:image")) {
+                    div.innerHTML = `<img src="${content}" alt="Image">`;
+                } else if(content.startsWith("data:audio")) {
+                    div.innerHTML = `<audio controls src="${content}"></audio>`;
+                } else {
+                    div.innerText = content;
+                }
+
+                if(isMe) div.ondblclick = () => { if(confirm("Delete?")) db.ref('chats/'+m.key).remove(); }
+                container.appendChild(div);
+            });
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function sendMsg() {
+            const txt = document.getElementById('msgInput').value.trim();
+            if(!txt || !currentPartner) return;
+            performSend(txt);
+            document.getElementById('micBtn').style.display = 'flex';
+            document.getElementById('sendBtn').style.display = 'none';
+        }
+
+        function handleImage(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const img = new Image();
+                    img.src = e.target.result;
+                    img.onload = function () {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        const maxWidth = 300; 
+                        const scaleSize = maxWidth / img.width;
+                        canvas.width = maxWidth;
+                        canvas.height = img.height * scaleSize;
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        performSend(canvas.toDataURL('image/jpeg', 0.7)); 
+                    }
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function performSend(data) {
+            const secret = document.getElementById('secret').value;
+            const enc = CryptoJS.AES.encrypt(data, secret).toString();
+            db.ref('chats').push({
+                sender: myAddress,
+                receiver: currentPartner,
+                message: enc,
+                timestamp: Date.now()
+            });
+            document.getElementById('msgInput').value = "";
+            document.getElementById('imgInput').value = "";
+        }
+
+              // Voice
+        async function startRecording() {
+            if(!currentPartner) return;
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+                isRecording = true;
+                document.getElementById('micBtn').classList.add('recording');
+                document.getElementById('rec-status').style.display = 'block';
+                mediaRecorder.ondataavailable = event => { audioChunks.push(event.data); };
+                mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    const reader = new FileReader();
+                    reader.onload = (e) => { performSend(e.target.result); };
+                    reader.readAsDataURL(audioBlob);
+                };
+                mediaRecorder.start();
+            } catch(e) { alert("Microphone access denied!"); }
+        }
+
+        function stopRecording() {
+            if(isRecording && mediaRecorder) {
+                mediaRecorder.stop();
+                isRecording = false;
+                document.getElementById('micBtn').classList.remove('recording');
+                document.getElementById('rec-status').style.display = 'none';
+            }
+        }
+    </script>
+    <script>
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('./service-worker.js')
@@ -151,6 +451,7 @@
         });
     }
 </script>
-    
 </body>
 </html>
+
+        
