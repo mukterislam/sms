@@ -1,15 +1,19 @@
-const CACHE_NAME = "my-chart-cache-v2";
+const CACHE_NAME = "my-chart-cache-v3"; // ভার্সন পরিবর্তন করেছি যাতে নতুন করে আপডেট হয়
 
+// ১. এখানে শুধু সেই ফাইলগুলোই রাখবেন যা আপনার ফোল্ডারে সত্যিই আছে।
+// style.css বাদ দিয়েছি কারণ আপনার CSS HTML-এর ভেতরেই আছে।
 const ASSETS_TO_CACHE = [
     "./",
     "./index.html",
-    "./style.css",
+    "./manifest.json",
+    "./script.js",         // আপনার HTML এ script.js লিঙ্ক করা আছে, তাই এটি যোগ করলাম
     "./icons/icon-192.png",
     "./icons/icon-512.png"
 ];
 
-// 1. Install Event: ব্রাউজারে ক্যাশ তৈরি করা
+// 1. Install Event
 self.addEventListener("install", (event) => {
+    self.skipWaiting(); // নতুন সার্ভিস ওয়ার্কার দ্রুত চালু করার জন্য
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
             console.log("Caching assets...");
@@ -18,27 +22,36 @@ self.addEventListener("install", (event) => {
     );
 });
 
-// 2. Activate Event: পুরনো ক্যাশ ডিলিট করা (যদি ভার্সন চেঞ্জ হয়)
+// 2. Activate Event
 self.addEventListener("activate", (event) => {
     event.waitUntil(
         caches.keys().then((keys) => {
             return Promise.all(
                 keys.map((key) => {
                     if (key !== CACHE_NAME) {
+                        console.log("Deleting old cache:", key);
                         return caches.delete(key);
                     }
                 })
             );
         })
     );
+    return self.clients.claim();
 });
 
-// 3. Fetch Event: ডেটা লোড করার লজিক (Network First, then Cache)
+// 3. Fetch Event (নিরাপদ লজিক)
 self.addEventListener("fetch", (event) => {
+    // শুধু GET রিকোয়েস্ট ক্যাশ করব (Firebase বা POST রিকোয়েস্ট ক্যাশ করলে এরর হয়)
+    if (event.request.method !== "GET") return;
+
     event.respondWith(
         fetch(event.request)
             .then((response) => {
-                // ইন্টারনেট থাকলে রেসপন্স রিটার্ন করবে এবং ক্যাশ আপডেট করবে
+                // রেসপন্স ভ্যালিড কিনা চেক করা
+                if (!response || response.status !== 200 || response.type !== 'basic') {
+                    return response;
+                }
+
                 const responseClone = response.clone();
                 caches.open(CACHE_NAME).then((cache) => {
                     cache.put(event.request, responseClone);
@@ -46,7 +59,7 @@ self.addEventListener("fetch", (event) => {
                 return response;
             })
             .catch(() => {
-                // ইন্টারনেট না থাকলে ক্যাশ থেকে ফাইল দেখাবে
+                // অফলাইন হলে ক্যাশ থেকে লোড করবে
                 return caches.match(event.request);
             })
     );
