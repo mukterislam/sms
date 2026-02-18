@@ -1,13 +1,11 @@
-const CACHE_NAME = "my-pwa-cache-v2";
+const CACHE_NAME = "my-chart-cache-v2";
 
-// এখানে শুধু প্রধান ফাইলগুলোর নাম দিন যা অফলাইনেও দেখাতে চান
 const ASSETS_TO_CACHE = [
     "./",
     "./index.html",
-    "./script.js",
+    "./style.css",
     "./icons/icon-192.png",
     "./icons/icon-512.png"
-    // আপনার যদি main.js বা অন্য কোনো জরুরি ফাইল থাকে, তা এখানে যোগ করুন
 ];
 
 // 1. Install Event: ব্রাউজারে ক্যাশ তৈরি করা
