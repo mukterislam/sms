@@ -441,6 +441,51 @@ window.onload = () => {
                 document.getElementById('rec-status').style.display = 'none';
             }
         }
+
+let deferredPrompt;
+const installAppBtn = document.getElementById('installAppBtn');
+
+// যখন ব্রাউজার বুঝবে যে অ্যাপটি ইনস্টল করার যোগ্য, তখন এই ইভেন্টটি ফায়ার হবে
+window.addEventListener('beforeinstallprompt', (e) => {
+    // ব্রাউজারের ডিফল্ট অটোমেটিক পপআপ আসা বন্ধ করা
+    e.preventDefault();
+    
+    // ইভেন্টটি সেভ করে রাখা যাতে পরে কল করা যায়
+    deferredPrompt = e;
+    
+    // আমাদের কাস্টম ইনস্টল বাটনটি ইউজারকে দেখানো
+    installAppBtn.style.display = 'block';
+});
+
+// ইউজারের ক্লিকে ইনস্টল প্রম্পট দেখানো
+installAppBtn.addEventListener('click', async () => {
+    if (deferredPrompt !== null) {
+        // ব্রাউজারের আসল ইনস্টল পপআপটি কল করা
+        deferredPrompt.prompt();
+        
+        // ইউজার 'Install' নাকি 'Cancel' করল তা চেক করা
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+            console.log('User accepted the install prompt');
+        } else {
+            console.log('User dismissed the install prompt');
+        }
+        
+        // একবার দেখানোর পর এটি আর ব্যবহার করা যাবে না, তাই ক্লিয়ার করা
+        deferredPrompt = null;
+        
+        // বাটনটি আবার লুকিয়ে ফেলা
+        installAppBtn.style.display = 'none';
+    }
+});
+
+// অ্যাপ সফলভাবে ইনস্টল হয়ে গেলে বাটনটি লুকিয়ে ফেলা
+window.addEventListener('appinstalled', () => {
+    installAppBtn.style.display = 'none';
+    console.log('PWA was installed');
+});
+        
+    
     </script>
     <script>
     if ('serviceWorker' in navigator) {
@@ -451,6 +496,10 @@ window.onload = () => {
         });
     }
 </script>
+<button id="installAppBtn" style="display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; padding: 12px 24px; background: #00a884; color: white; border: none; border-radius: 25px; font-weight: bold; font-size: 16px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+    Install Web App
+</button>
+    
 </body>
 </html>
 
