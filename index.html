@@ -79,7 +79,10 @@
     </style>
 </head>
 <body>
-
+<button id="installAppBtn" style="display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; padding: 12px 24px; background: #00a884; color: white; border: none; border-radius: 25px; font-weight: bold; font-size: 16px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+    Install Web App
+</button>
+    
     <div id="login-modal" class="modal-overlay" style="display: flex;">
         <div class="modal-box">
             <h2 style="color:#00a884;">Wallet Login</h2>
@@ -441,8 +444,16 @@ window.onload = () => {
                 document.getElementById('rec-status').style.display = 'none';
             }
         }
-
-let deferredPrompt;
+    </script>
+    <script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./service-worker.js')
+                .then(reg => console.log('Service Worker Registered!', reg))
+                .catch(err => console.log('Service Worker Failed!', err));
+        });
+    }
+    let deferredPrompt;
 const installAppBtn = document.getElementById('installAppBtn');
 
 // যখন ব্রাউজার বুঝবে যে অ্যাপটি ইনস্টল করার যোগ্য, তখন এই ইভেন্টটি ফায়ার হবে
@@ -484,22 +495,7 @@ window.addEventListener('appinstalled', () => {
     installAppBtn.style.display = 'none';
     console.log('PWA was installed');
 });
-        
-    
-    </script>
-    <script>
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./service-worker.js')
-                .then(reg => console.log('Service Worker Registered!', reg))
-                .catch(err => console.log('Service Worker Failed!', err));
-        });
-    }
-</script>
-<button id="installAppBtn" style="display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; padding: 12px 24px; background: #00a884; color: white; border: none; border-radius: 25px; font-weight: bold; font-size: 16px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
-    Install Web App
-</button>
-    
+   </script>     
 </body>
 </html>
 
